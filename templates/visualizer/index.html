@@ -1,0 +1,135 @@
+{% extends 'base.html' %}
+{% load static %}
+{% block title %}MathViz — Interactive Mathematics Visualization Tools{% endblock %}
+{% block content %}
+
+<section class="hero">
+    <div class="hero-content">
+        <div class="hero-badge">Interactive mathematics workspace</div>
+        <h1 class="hero-title">Visualize equations, calculus and geometry in real time</h1>
+        <p class="hero-subtitle">Plot functions, find roots and extrema automatically, compare curves, and explore derivatives and integrals. No account needed to get started.</p>
+        <div class="hero-actions">
+            <a href="{% url 'visualizer' %}" class="btn-primary btn-hero">
+                <span>Open the visualizer</span>
+            </a>
+            {% if not user.is_authenticated %}
+            <a href="{% url 'register' %}" class="btn-outline btn-hero">Create an account</a>
+            {% else %}
+            <a href="{% url 'dashboard' %}" class="btn-outline btn-hero">Go to Dashboard</a>
+            {% endif %}
+        </div>
+        <div class="hero-roles">
+            <div class="role-pill guest">Guest: explore freely</div>
+            <div class="role-pill student">Student: save and learn</div>
+            <div class="role-pill teacher">Teacher: manage and report</div>
+        </div>
+    </div>
+    <div class="hero-demo">
+        <div id="heroDemoChart"></div>
+    </div>
+</section>
+
+<section class="features">
+    <div class="section-header">
+        <h2>What you can do with MathViz</h2>
+        <p>From linear equations to calculus, every graph responds as you change it.</p>
+    </div>
+    <div class="features-grid">
+        <div class="feature-card">
+            <div class="feature-icon">f(x)</div>
+            <h3>Algebraic functions</h3>
+            <p>Plot linear, quadratic, cubic and polynomial functions. Adjust parameters with live sliders and see the graph transform instantly.</p>
+        </div>
+        <div class="feature-card">
+            <div class="feature-icon">∂</div>
+            <h3>Calculus</h3>
+            <p>Plot derivatives and integrals of any function, shade the area under a curve, and read off roots, extrema and inflection points automatically.</p>
+        </div>
+        <div class="feature-card">
+            <div class="feature-icon">△</div>
+            <h3>Geometry</h3>
+            <p>Explore circles, ellipses, parabolas, and polygons. Adjust dimensions with sliders and observe area and perimeter calculations in real time.</p>
+        </div>
+        <div class="feature-card">
+            <div class="feature-icon">~</div>
+            <h3>Trigonometry</h3>
+            <p>Explore sine, cosine, tangent and their transformations. Adjust amplitude, frequency, and phase shift interactively.</p>
+        </div>
+        <div class="feature-card">
+            <div class="feature-icon">↓</div>
+            <h3>Save and share</h3>
+            <p>Students and teachers can save their equations for future reference, make them public to share with others, and build a personal equation library.</p>
+        </div>
+        <div class="feature-card">
+            <div class="feature-icon">Σ</div>
+            <h3>Teacher reports</h3>
+            <p>Teachers get access to usage analytics, student activity reports, and can export graphs for use in lesson materials.</p>
+        </div>
+    </div>
+</section>
+
+{% if public_equations %}
+<section class="public-equations">
+    <div class="section-header">
+        <h2>Community equations</h2>
+        <p>Shared by teachers and students on MathViz</p>
+    </div>
+    <div class="equations-grid">
+        {% for eq in public_equations %}
+        <a href="{% url 'visualizer' %}?eq={{ eq.id }}" class="equation-card">
+            <div class="eq-type-badge">{{ eq.get_equation_type_display }}</div>
+            <h4>{{ eq.title }}</h4>
+            <code class="eq-expr">{{ eq.expression }}</code>
+            <div class="eq-meta">By {{ eq.user.username }} &middot; {{ eq.get_equation_type_display }}</div>
+        </a>
+        {% endfor %}
+    </div>
+</section>
+{% endif %}
+
+<section class="cta-section">
+    <div class="cta-content">
+        <h2>Ready to start?</h2>
+        <p>Open the visualizer now. No signup required.</p>
+        <div class="cta-actions">
+            <a href="{% url 'visualizer' %}" class="btn-primary btn-lg">Open the visualizer</a>
+            {% if not user.is_authenticated %}
+            <a href="{% url 'register' %}" class="btn-outline btn-lg">Create an account</a>
+            {% endif %}
+        </div>
+    </div>
+</section>
+
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+(function() {
+    const css = (n) => getComputedStyle(document.documentElement).getPropertyValue(n).trim();
+    function draw() {
+        const dark = document.documentElement.dataset.theme === 'dark';
+        const pal = dark ? ['#6aa6f8', '#f59a6b', '#4fd1c5'] : ['#1f5fbf', '#b4430f', '#0f766e'];
+        const grid = dark ? 'rgba(255,255,255,0.08)' : 'rgba(16,32,52,0.08)';
+        const muted = css('--text2');
+        const x = [], s = [], c = [], q = [];
+        for (let i = -10; i <= 10; i += 0.05) {
+            x.push(i); s.push(Math.sin(i)); c.push(Math.cos(i)); q.push(0.1 * i * i - 0.5);
+        }
+        const axis = (t) => ({ gridcolor: grid, zerolinecolor: dark ? 'rgba(255,255,255,0.4)' : 'rgba(16,32,52,0.5)', tickfont: { color: muted }, title: { text: t, font: { color: muted } } });
+        Plotly.react('heroDemoChart', [
+            { x, y: s, type: 'scatter', mode: 'lines', name: 'sin(x)', line: { color: pal[0], width: 2.2 } },
+            { x, y: c, type: 'scatter', mode: 'lines', name: 'cos(x)', line: { color: pal[1], width: 2.2 } },
+            { x, y: q, type: 'scatter', mode: 'lines', name: '0.1x² − 0.5', line: { color: pal[2], width: 2.2 } },
+        ], {
+            paper_bgcolor: css('--surface'), plot_bgcolor: css('--surface'),
+            font: { color: css('--text'), family: 'IBM Plex Sans' },
+            xaxis: axis('x'), yaxis: axis('f(x)'),
+            showlegend: true, legend: { orientation: 'h', y: 1.1, font: { color: muted } },
+            margin: { l: 44, r: 12, t: 28, b: 40 }, hovermode: 'x unified',
+        }, { responsive: true, displayModeBar: false });
+    }
+    draw();
+    window.addEventListener('themechange', draw);
+})();
+</script>
+{% endblock %}
